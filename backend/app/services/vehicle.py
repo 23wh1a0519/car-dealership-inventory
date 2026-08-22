@@ -15,3 +15,11 @@ def create_vehicle(db: Session, vehicle_data: VehicleCreate):
     return vehicle
 def get_vehicles(db: Session):
     return db.query(Vehicle).all()
+def search_vehicles(
+    db: Session,
+    make: str | None = None,
+):
+    query = db.query(Vehicle)
+    if make:
+        query = query.filter(Vehicle.make == make)
+    return query.all()
