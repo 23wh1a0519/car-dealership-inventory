@@ -9,6 +9,7 @@ from app.services.vehicle import (
     get_vehicles as get_vehicles_service,
     search_vehicles as search_vehicles_service,
     update_vehicle as update_vehicle_service,
+    delete_vehicle as delete_vehicle_service,
 )
 router = APIRouter(
     prefix="/api/vehicles",
@@ -65,3 +66,23 @@ def update_vehicle(
             detail="Vehicle not found",
         )
     return vehicle
+@router.delete(
+    "/{vehicle_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_vehicle(
+    vehicle_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if not current_user["is_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    vehicle = delete_vehicle_service(db, vehicle_id)
+    if vehicle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found",
+        )

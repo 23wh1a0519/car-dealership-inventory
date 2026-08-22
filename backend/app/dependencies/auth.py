@@ -14,12 +14,16 @@ def get_current_user(
             algorithms=[ALGORITHM],
         )
         user_id = payload.get("sub")
+        is_admin = payload.get("is_admin",False)
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
             )
-        return user_id
+        return {
+            "id": user_id,
+            "is_admin": is_admin,
+        }
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

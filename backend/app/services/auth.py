@@ -20,6 +20,6 @@ def login_user(db: Session, user_data: UserLogin):
     if user is None or user.password != user_data.password:
         return None
     access_token = create_access_token(
-        {"sub": str(user.id)}
+        {"sub": str(user.id),"is_admin": user.is_admin,}
     )
-    return {"access_token": access_token}
+    return {"access_token": access_token,"token_type": "bearer"}
