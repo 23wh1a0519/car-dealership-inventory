@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
+from app.utils.security import create_access_token
 from app.schemas.auth import UserRegister,UserLogin
 def register_user(db: Session, user_data: UserRegister):
     user = User(
@@ -16,8 +17,9 @@ def login_user(db: Session, user_data: UserLogin):
         .filter(User.email == user_data.email)
         .first()
     )
-
     if user is None or user.password != user_data.password:
         return None
-
-    return {"access_token": "dummy-token"}
+    access_token = create_access_token(
+        {"sub": str(user.id)}
+    )
+    return {"access_token": access_token}
