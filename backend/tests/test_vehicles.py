@@ -71,3 +71,41 @@ def test_search_vehicles_by_make():
     assert isinstance(data, list)
     assert len(data) >= 1
     assert data[0]["make"] == "Toyota"
+
+def test_search_vehicles_by_model():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    client.post(
+        "/api/vehicles",
+        json={
+            "make": "Honda",
+            "model": "Civic",
+            "category": "Sedan",
+            "price": 22000,
+            "quantity": 3,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    response = client.get(
+        "/api/vehicles/search",
+        params={
+            "model": "Camry",
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    for vehicle in data:
+        assert vehicle["model"] == "Camry"
