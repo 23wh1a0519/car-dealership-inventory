@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from app.main import app
+from app.routers.auth import get_db
 client = TestClient(app)
 def test_create_vehicle():
     login_response = client.post("/api/auth/login",
@@ -362,3 +363,53 @@ def test_restock_vehicle_requires_admin():
         },
     )
     assert response.status_code == 403
+
+def test_admin_can_restock_vehicle():
+    db = next(get_db())
+    try:
+        from app.models.user import User
+        admin = User(
+            email="admin@example.com",
+            password="Password123",
+            is_admin=True,
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+    finally:
+        db.close()
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    create_response = client.post(
+        "/api/vehicles",
+        json={
+            "make": "Toyota",
+            "model": "RAV4",
+            "category": "SUV",
+            "price": 30000,
+            "quantity": 2,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    vehicle_id = create_response.json()["id"]
+    response = client.post(
+        f"/api/vehicles/{vehicle_id}/restock",
+        json={
+            "quantity": 5,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == vehicle_id
+    assert data["quantity"] == 7

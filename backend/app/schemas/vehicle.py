@@ -16,3 +16,6 @@ class VehicleResponse(BaseModel):
     quantity: int
     class Config:
         from_attributes = True
+        
+class RestockRequest(BaseModel):
+    quantity: int

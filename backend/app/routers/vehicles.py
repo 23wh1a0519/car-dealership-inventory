@@ -2,7 +2,7 @@ from fastapi import APIRouter,Depends,status,HTTPException
 from sqlalchemy.orm import Session
 from app.dependencies.auth import get_current_user
 from app.routers.auth import get_db
-from app.schemas.vehicle import VehicleCreate,VehicleResponse
+from app.schemas.vehicle import VehicleCreate,VehicleResponse,RestockRequest
 from app.services.vehicle import create_vehicle as create_vehicle_service
 from app.services.vehicle import (
     create_vehicle as create_vehicle_service,
@@ -11,6 +11,7 @@ from app.services.vehicle import (
     update_vehicle as update_vehicle_service,
     delete_vehicle as delete_vehicle_service,
     purchase_vehicle as purchase_vehicle_service,
+    restock_vehicle as restock_vehicle_service,
 )
 router = APIRouter(
     prefix="/api/vehicles",
@@ -106,5 +107,31 @@ def purchase_vehicle(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vehicle is out of stock",
+        )
+    return vehicle
+@router.post(
+    "/{vehicle_id}/restock",
+    response_model=VehicleResponse,
+)
+def restock_vehicle(
+    vehicle_id: int,
+    restock_data: RestockRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if not current_user["is_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    vehicle = restock_vehicle_service(
+        db,
+        vehicle_id,
+        restock_data.quantity,
+    )
+    if vehicle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found",
         )
     return vehicle

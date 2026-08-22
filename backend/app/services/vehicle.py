@@ -92,3 +92,20 @@ def purchase_vehicle(
     db.commit()
     db.refresh(vehicle)
     return vehicle
+
+def restock_vehicle(
+    db: Session,
+    vehicle_id: int,
+    quantity: int,
+):
+    vehicle = (
+        db.query(Vehicle)
+        .filter(Vehicle.id == vehicle_id)
+        .first()
+    )
+    if vehicle is None:
+        return None
+    vehicle.quantity += quantity
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle
