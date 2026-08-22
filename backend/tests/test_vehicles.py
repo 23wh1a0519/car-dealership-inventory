@@ -369,7 +369,7 @@ def test_admin_can_restock_vehicle():
     try:
         from app.models.user import User
         admin = User(
-            email="admin@example.com",
+            email="samplerestockadmin@example.com",
             password="Password123",
             is_admin=True,
         )
@@ -381,7 +381,7 @@ def test_admin_can_restock_vehicle():
     login_response = client.post(
         "/api/auth/login",
         json={
-            "email": "admin@example.com",
+            "email": "samplerestockadmin@example.com",
             "password": "Password123",
         },
     )
@@ -413,3 +413,47 @@ def test_admin_can_restock_vehicle():
     data = response.json()
     assert data["id"] == vehicle_id
     assert data["quantity"] == 7
+
+def test_admin_can_delete_vehicle():
+    db = next(get_db())
+    try:
+        from app.models.user import User
+        admin = User(
+            email="deleteadmin@example.com",
+            password="Password123",
+            is_admin=True,
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+    finally:
+        db.close()
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "deleteadmin@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    create_response = client.post(
+        "/api/vehicles",
+        json={
+            "make": "BMW",
+            "model": "X3",
+            "category": "SUV",
+            "price": 50000,
+            "quantity": 2,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    vehicle_id = create_response.json()["id"]
+    response = client.delete(
+        f"/api/vehicles/{vehicle_id}",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 204
