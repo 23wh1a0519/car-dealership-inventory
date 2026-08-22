@@ -296,3 +296,69 @@ def test_purchase_vehicle():
     data = response.json()
     assert data["id"] == vehicle_id
     assert data["quantity"] == 2
+
+def test_purchase_vehicle_out_of_stock():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    create_response = client.post(
+        "/api/vehicles",
+        json={
+            "make": "Honda",
+            "model": "City",
+            "category": "Sedan",
+            "price": 20000,
+            "quantity": 0,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    vehicle_id = create_response.json()["id"]
+    response = client.post(
+        f"/api/vehicles/{vehicle_id}/purchase",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Vehicle is out of stock"
+
+def test_restock_vehicle_requires_admin():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    create_response = client.post(
+        "/api/vehicles",
+        json={
+            "make": "Toyota",
+            "model": "RAV4",
+            "category": "SUV",
+            "price": 30000,
+            "quantity": 2,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    vehicle_id = create_response.json()["id"]
+    response = client.post(
+        f"/api/vehicles/{vehicle_id}/restock",
+        json={
+            "quantity": 5,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 403
