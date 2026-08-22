@@ -231,3 +231,34 @@ def test_update_vehicle():
     assert data["category"] == "Sedan"
     assert data["price"] == 25000
     assert data["quantity"] == 3
+
+def test_delete_vehicle_requires_admin():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    create_response = client.post(
+        "/api/vehicles",
+        json={
+            "make": "Audi",
+            "model": "A4",
+            "category": "Sedan",
+            "price": 40000,
+            "quantity": 2,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    vehicle_id = create_response.json()["id"]
+    response = client.delete(
+        f"/api/vehicles/{vehicle_id}",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 403
