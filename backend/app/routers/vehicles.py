@@ -35,7 +35,8 @@ def get_vehicles(
 )
 def search_vehicles(
     make: str | None = None,
+    model: str | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    return search_vehicles_service(db, make)
+    return search_vehicles_service(db,make,model)

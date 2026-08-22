@@ -18,8 +18,11 @@ def get_vehicles(db: Session):
 def search_vehicles(
     db: Session,
     make: str | None = None,
+    model: str | None = None,
 ):
     query = db.query(Vehicle)
     if make:
         query = query.filter(Vehicle.make == make)
+    if model:
+            query = query.filter(Vehicle.model == model)
     return query.all()
