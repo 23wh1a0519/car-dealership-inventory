@@ -48,3 +48,26 @@ def test_get_vehicles():
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 1
+def test_search_vehicles_by_make():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    response = client.get(
+        "/api/vehicles/search",
+        params={
+            "make": "Toyota",
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert data[0]["make"] == "Toyota"
