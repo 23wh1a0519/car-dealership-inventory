@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Depends,status
+from fastapi import APIRouter,Depends,status,HTTPException
 from sqlalchemy.orm import Session
 from app.dependencies.auth import get_current_user
 from app.routers.auth import get_db
@@ -8,6 +8,7 @@ from app.services.vehicle import (
     create_vehicle as create_vehicle_service,
     get_vehicles as get_vehicles_service,
     search_vehicles as search_vehicles_service,
+    update_vehicle as update_vehicle_service,
 )
 router = APIRouter(
     prefix="/api/vehicles",
@@ -43,3 +44,24 @@ def search_vehicles(
     current_user=Depends(get_current_user),
 ):
     return search_vehicles_service(db,make,model,category,min_price,max_price,)
+@router.put(
+    "/{vehicle_id}",
+    response_model=VehicleResponse,
+)
+def update_vehicle(
+    vehicle_id: int,
+    vehicle_data: VehicleCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    vehicle = update_vehicle_service(
+        db,
+        vehicle_id,
+        vehicle_data,
+    )
+    if vehicle is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Vehicle not found",
+        )
+    return vehicle
