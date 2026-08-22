@@ -29,3 +29,22 @@ def test_create_vehicle():
     assert data["category"] == "Sedan"
     assert data["price"] == 25000
     assert data["quantity"] == 5
+def test_get_vehicles():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    response = client.get(
+        "/api/vehicles",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1
