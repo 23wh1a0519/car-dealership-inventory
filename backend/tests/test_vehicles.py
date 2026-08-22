@@ -262,3 +262,37 @@ def test_delete_vehicle_requires_admin():
         },
     )
     assert response.status_code == 403
+    
+def test_purchase_vehicle():
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
+    create_response = client.post(
+        "/api/vehicles",
+        json={
+            "make": "Toyota",
+            "model": "Fortuner",
+            "category": "SUV",
+            "price": 35000,
+            "quantity": 3,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    vehicle_id = create_response.json()["id"]
+    response = client.post(
+        f"/api/vehicles/{vehicle_id}/purchase",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == vehicle_id
+    assert data["quantity"] == 2
