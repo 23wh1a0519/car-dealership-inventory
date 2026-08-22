@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.vehicle import Vehicle
 from app.schemas.vehicle import VehicleCreate
+
 def create_vehicle(db: Session, vehicle_data: VehicleCreate):
     vehicle = Vehicle(
         make=vehicle_data.make,
@@ -13,8 +14,10 @@ def create_vehicle(db: Session, vehicle_data: VehicleCreate):
     db.commit()
     db.refresh(vehicle)
     return vehicle
+
 def get_vehicles(db: Session):
     return db.query(Vehicle).all()
+
 def search_vehicles(
     db: Session,
     make: str | None = None,
@@ -56,6 +59,7 @@ def update_vehicle(
     db.commit()
     db.refresh(vehicle)
     return vehicle
+
 def delete_vehicle(
     db: Session,
     vehicle_id: int,
@@ -69,4 +73,22 @@ def delete_vehicle(
         return None
     db.delete(vehicle)
     db.commit()
+    return vehicle
+
+def purchase_vehicle(
+    db: Session,
+    vehicle_id: int,
+):
+    vehicle = (
+        db.query(Vehicle)
+        .filter(Vehicle.id == vehicle_id)
+        .first()
+    )
+    if vehicle is None:
+        return None
+    if vehicle.quantity <= 0:
+        return "out_of_stock"
+    vehicle.quantity -= 1
+    db.commit()
+    db.refresh(vehicle)
     return vehicle

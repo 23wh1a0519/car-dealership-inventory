@@ -10,6 +10,7 @@ from app.services.vehicle import (
     search_vehicles as search_vehicles_service,
     update_vehicle as update_vehicle_service,
     delete_vehicle as delete_vehicle_service,
+    purchase_vehicle as purchase_vehicle_service,
 )
 router = APIRouter(
     prefix="/api/vehicles",
@@ -86,3 +87,24 @@ def delete_vehicle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehicle not found",
         )
+@router.post(
+    "/{vehicle_id}/purchase",
+    response_model=VehicleResponse,
+)
+def purchase_vehicle(
+    vehicle_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    vehicle = purchase_vehicle_service(db, vehicle_id)
+    if vehicle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found",
+        )
+    if vehicle == "out_of_stock":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vehicle is out of stock",
+        )
+    return vehicle
