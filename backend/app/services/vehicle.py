@@ -13,3 +13,5 @@ def create_vehicle(db: Session, vehicle_data: VehicleCreate):
     db.commit()
     db.refresh(vehicle)
     return vehicle
+def get_vehicles(db: Session):
+    return db.query(Vehicle).all()

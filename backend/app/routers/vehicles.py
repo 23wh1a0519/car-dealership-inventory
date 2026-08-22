@@ -4,6 +4,10 @@ from app.dependencies.auth import get_current_user
 from app.routers.auth import get_db
 from app.schemas.vehicle import VehicleCreate,VehicleResponse
 from app.services.vehicle import create_vehicle as create_vehicle_service
+from app.services.vehicle import(
+    create_vehicle as create_vehicle_service,
+    get_vehicles as get_vehicles_service,
+)
 router = APIRouter(
     prefix="/api/vehicles",
     tags=["Vehicles"],
@@ -15,3 +19,12 @@ def create_vehicle(
     current_user=Depends(get_current_user),
 ):
     return create_vehicle_service(db, vehicle_data)
+@router.get(
+    "",
+    response_model=list[VehicleResponse],
+)
+def get_vehicles(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return get_vehicles_service(db)
