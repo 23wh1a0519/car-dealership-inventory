@@ -1,7 +1,14 @@
 from fastapi.testclient import TestClient
 from app.main import app
 client = TestClient(app)
-def test_create_vehicle_requires_authentication():
+def test_create_vehicle():
+    login_response = client.post("/api/auth/login",
+        json={
+            "email": "newuser@example.com",
+            "password": "Password123",
+        },
+    )
+    token = login_response.json()["access_token"]
     response = client.post(
         "/api/vehicles",
         json={
@@ -10,5 +17,15 @@ def test_create_vehicle_requires_authentication():
             "category": "Sedan",
             "price": 25000,
             "quantity": 5,
+        },headers={
+            "Authorization": f"Bearer {token}",
         },)
-    assert response.status_code == 401
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["make"] == "Toyota"
+    assert data["model"] == "Camry"
+    assert data["category"] == "Sedan"
+    assert data["price"] == 25000
+    assert data["quantity"] == 5
