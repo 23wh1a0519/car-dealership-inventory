@@ -373,7 +373,6 @@ Add a screenshot showing the admin Add/Edit/Delete controls:
 ![Admin Dashboard](screenshots/admin-dashboard.png)
 ```
 
-> Replace the image paths above with the actual screenshot files included in the repository.
 
 ---
 
