@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react"
-import { getVehicles } from "./api"
+import {
+  getVehicles,
+  searchVehicles,
+  updateVehicle,
+} from "./api"
 import { getToken, removeToken } from "./auth"
 
 const API_URL = "http://localhost:8000"
@@ -21,7 +25,10 @@ const carImages = {
     "https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=900&q=85",
 }
 
-// Read is_admin from the JWT
+// =========================
+// ADMIN STATUS
+// =========================
+
 function getAdminStatus() {
   const token = getToken()
 
@@ -43,26 +50,67 @@ function getAdminStatus() {
 function VehicleDashboard({ onLogout }) {
   const [vehicles, setVehicles] = useState([])
   const [error, setError] = useState("")
-  const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("All")
-  const [purchasing, setPurchasing] = useState(null)
 
-  // ADMIN
-  const [isAdmin, setIsAdmin] = useState(false)
+  // =========================
+  // SEARCH
+  // =========================
 
-  // ADD VEHICLE
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [makeSearch, setMakeSearch] = useState("")
+  const [modelSearch, setModelSearch] = useState("")
+  const [categorySearch, setCategorySearch] =
+    useState("All")
+  const [minPrice, setMinPrice] = useState("")
+  const [maxPrice, setMaxPrice] = useState("")
+  const [searching, setSearching] =
+    useState(false)
 
-  const [newVehicle, setNewVehicle] = useState({
-    make: "",
-    model: "",
-    category: "",
-    price: "",
-    quantity: "",
-  })
+  // =========================
+  // PURCHASE
+  // =========================
 
+  const [purchasing, setPurchasing] =
+    useState(null)
+
+  // =========================
   // RESTOCK
-  const [restocking, setRestocking] = useState(null)
+  // =========================
+
+  const [restocking, setRestocking] =
+    useState(null)
+
+  // =========================
+  // ADMIN
+  // =========================
+
+  const [isAdmin, setIsAdmin] =
+    useState(false)
+
+  // =========================
+  // ADD VEHICLE
+  // =========================
+
+  const [showAddForm, setShowAddForm] =
+    useState(false)
+
+  const [newVehicle, setNewVehicle] =
+    useState({
+      make: "",
+      model: "",
+      category: "",
+      price: "",
+      quantity: "",
+    })
+
+  // =========================
+  // EDIT VEHICLE
+  // =========================
+
+  const [editingVehicle, setEditingVehicle] =
+    useState(null)
+
+  // =========================
+  // LOAD VEHICLES
+  // =========================
 
   useEffect(() => {
     setIsAdmin(getAdminStatus())
@@ -72,12 +120,78 @@ function VehicleDashboard({ onLogout }) {
         const data = await getVehicles()
         setVehicles(data)
       } catch (err) {
-        setError("Unable to load vehicle inventory.")
+        setError(
+          "Unable to load vehicle inventory."
+        )
       }
     }
 
     loadVehicles()
   }, [])
+
+  // =========================
+  // SEARCH VEHICLES
+  // =========================
+
+  async function handleSearch() {
+    try {
+      setSearching(true)
+      setError("")
+
+      // Validate price range
+      if (
+        minPrice !== "" &&
+        maxPrice !== "" &&
+        Number(minPrice) > Number(maxPrice)
+      ) {
+        setError(
+          "Minimum price cannot be greater than maximum price."
+        )
+        return
+      }
+
+      const data = await searchVehicles({
+        make: makeSearch,
+        model: modelSearch,
+        category:
+          categorySearch === "All"
+            ? ""
+            : categorySearch,
+        min_price: minPrice,
+        max_price: maxPrice,
+      })
+
+      setVehicles(data)
+    } catch (err) {
+      setError(
+        "Unable to search vehicles."
+      )
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // =========================
+  // CLEAR SEARCH
+  // =========================
+
+  async function handleClearSearch() {
+    setMakeSearch("")
+    setModelSearch("")
+    setCategorySearch("All")
+    setMinPrice("")
+    setMaxPrice("")
+    setError("")
+
+    try {
+      const data = await getVehicles()
+      setVehicles(data)
+    } catch (err) {
+      setError(
+        "Unable to load vehicles."
+      )
+    }
+  }
 
   // =========================
   // PURCHASE
@@ -100,17 +214,22 @@ function VehicleDashboard({ onLogout }) {
       )
 
       if (!response.ok) {
-        const data = await response.json()
+        const data =
+          await response.json()
+
         throw new Error(
-          data.detail || "Purchase failed"
+          data.detail ||
+            "Purchase failed"
         )
       }
 
-      const updatedVehicle = await response.json()
+      const updatedVehicle =
+        await response.json()
 
       setVehicles((current) =>
         current.map((vehicle) =>
-          vehicle.id === updatedVehicle.id
+          vehicle.id ===
+          updatedVehicle.id
             ? updatedVehicle
             : vehicle
         )
@@ -138,29 +257,38 @@ function VehicleDashboard({ onLogout }) {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
             Authorization: `Bearer ${token}`,
           },
 
           body: JSON.stringify({
             make: newVehicle.make,
             model: newVehicle.model,
-            category: newVehicle.category,
-            price: Number(newVehicle.price),
-            quantity: Number(newVehicle.quantity),
+            category:
+              newVehicle.category,
+            price: Number(
+              newVehicle.price
+            ),
+            quantity: Number(
+              newVehicle.quantity
+            ),
           }),
         }
       )
 
       if (!response.ok) {
-        const data = await response.json()
+        const data =
+          await response.json()
 
         throw new Error(
-          data.detail || "Failed to add vehicle"
+          data.detail ||
+            "Failed to add vehicle"
         )
       }
 
-      const createdVehicle = await response.json()
+      const createdVehicle =
+        await response.json()
 
       setVehicles((current) => [
         ...current,
@@ -177,7 +305,53 @@ function VehicleDashboard({ onLogout }) {
 
       setShowAddForm(false)
 
-      alert("Vehicle added successfully!")
+      alert(
+        "Vehicle added successfully!"
+      )
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  // =========================
+  // UPDATE VEHICLE
+  // =========================
+
+  async function handleUpdateVehicle(e) {
+    e.preventDefault()
+
+    try {
+      const updatedVehicle =
+        await updateVehicle(
+          editingVehicle.id,
+          {
+            make: editingVehicle.make,
+            model: editingVehicle.model,
+            category:
+              editingVehicle.category,
+            price: Number(
+              editingVehicle.price
+            ),
+            quantity: Number(
+              editingVehicle.quantity
+            ),
+          }
+        )
+
+      setVehicles((current) =>
+        current.map((vehicle) =>
+          vehicle.id ===
+          updatedVehicle.id
+            ? updatedVehicle
+            : vehicle
+        )
+      )
+
+      setEditingVehicle(null)
+
+      alert(
+        "Vehicle updated successfully!"
+      )
     } catch (err) {
       alert(err.message)
     }
@@ -198,8 +372,14 @@ function VehicleDashboard({ onLogout }) {
 
     const amount = Number(quantity)
 
-    if (!Number.isInteger(amount) || amount <= 0) {
-      alert("Please enter a valid positive quantity.")
+    if (
+      !Number.isInteger(amount) ||
+      amount <= 0
+    ) {
+      alert(
+        "Please enter a valid positive quantity."
+      )
+
       return
     }
 
@@ -214,7 +394,8 @@ function VehicleDashboard({ onLogout }) {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
             Authorization: `Bearer ${token}`,
           },
 
@@ -225,18 +406,22 @@ function VehicleDashboard({ onLogout }) {
       )
 
       if (!response.ok) {
-        const data = await response.json()
+        const data =
+          await response.json()
 
         throw new Error(
-          data.detail || "Restock failed"
+          data.detail ||
+            "Restock failed"
         )
       }
 
-      const updatedVehicle = await response.json()
+      const updatedVehicle =
+        await response.json()
 
       setVehicles((current) =>
         current.map((vehicle) =>
-          vehicle.id === updatedVehicle.id
+          vehicle.id ===
+          updatedVehicle.id
             ? updatedVehicle
             : vehicle
         )
@@ -257,9 +442,10 @@ function VehicleDashboard({ onLogout }) {
   // =========================
 
   async function handleDelete(vehicleId) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this vehicle?"
-    )
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this vehicle?"
+      )
 
     if (!confirmed) {
       return
@@ -280,20 +466,25 @@ function VehicleDashboard({ onLogout }) {
       )
 
       if (!response.ok) {
-        const data = await response.json()
+        const data =
+          await response.json()
 
         throw new Error(
-          data.detail || "Delete failed"
+          data.detail ||
+            "Delete failed"
         )
       }
 
       setVehicles((current) =>
         current.filter(
-          (vehicle) => vehicle.id !== vehicleId
+          (vehicle) =>
+            vehicle.id !== vehicleId
         )
       )
 
-      alert("Vehicle deleted successfully!")
+      alert(
+        "Vehicle deleted successfully!"
+      )
     } catch (err) {
       alert(err.message)
     }
@@ -309,45 +500,33 @@ function VehicleDashboard({ onLogout }) {
   }
 
   // =========================
-  // FILTER
+  // CATEGORIES
   // =========================
-
-  const filteredVehicles = vehicles.filter(
-    (vehicle) => {
-      const matchesSearch =
-        `${vehicle.make} ${vehicle.model}`
-          .toLowerCase()
-          .includes(search.toLowerCase())
-
-      const matchesCategory =
-        category === "All" ||
-        vehicle.category === category
-
-      return (
-        matchesSearch &&
-        matchesCategory
-      )
-    }
-  )
-
-  // =========================
-  // STATS
-  // =========================
-
-  const totalStock = vehicles.reduce(
-    (sum, vehicle) =>
-      sum + vehicle.quantity,
-    0
-  )
 
   const categories = [
     "All",
     ...new Set(
       vehicles.map(
-        (vehicle) => vehicle.category
+        (vehicle) =>
+          vehicle.category
       )
     ),
   ]
+
+  // =========================
+  // STATS
+  // =========================
+
+  const totalStock =
+    vehicles.reduce(
+      (sum, vehicle) =>
+        sum + vehicle.quantity,
+      0
+    )
+
+  // =========================
+  // UI
+  // =========================
 
   return (
     <div className="dashboard">
@@ -419,10 +598,13 @@ function VehicleDashboard({ onLogout }) {
             </h1>
 
             <p className="hero-text">
-              Explore our curated collection
-              of premium vehicles. Every model
-              is selected for quality, performance
-              and exceptional driving experience.
+              Explore our curated
+              collection of premium
+              vehicles. Every model
+              is selected for quality,
+              performance and
+              exceptional driving
+              experience.
             </p>
 
           </div>
@@ -511,8 +693,6 @@ function VehicleDashboard({ onLogout }) {
                 Vehicle Inventory
               </h2>
 
-              {/* ADD VEHICLE */}
-
               <button
                 className="add-vehicle-button"
                 onClick={() =>
@@ -528,21 +708,38 @@ function VehicleDashboard({ onLogout }) {
 
             </div>
 
+            {/* SEARCH */}
+
             <div className="filters">
 
               <input
                 type="text"
-                placeholder="Search vehicles..."
-                value={search}
+                placeholder="Make"
+                value={makeSearch}
                 onChange={(e) =>
-                  setSearch(e.target.value)
+                  setMakeSearch(
+                    e.target.value
+                  )
+                }
+              />
+
+              <input
+                type="text"
+                placeholder="Model"
+                value={modelSearch}
+                onChange={(e) =>
+                  setModelSearch(
+                    e.target.value
+                  )
                 }
               />
 
               <select
-                value={category}
+                value={categorySearch}
                 onChange={(e) =>
-                  setCategory(e.target.value)
+                  setCategorySearch(
+                    e.target.value
+                  )
                 }
               >
 
@@ -550,6 +747,7 @@ function VehicleDashboard({ onLogout }) {
                   (item) => (
                     <option
                       key={item}
+                      value={item}
                     >
                       {item}
                     </option>
@@ -557,6 +755,51 @@ function VehicleDashboard({ onLogout }) {
                 )}
 
               </select>
+
+              <input
+                type="number"
+                placeholder="Min Price"
+                value={minPrice}
+                onChange={(e) =>
+                  setMinPrice(
+                    e.target.value
+                  )
+                }
+                min="0"
+              />
+
+              <input
+                type="number"
+                placeholder="Max Price"
+                value={maxPrice}
+                onChange={(e) =>
+                  setMaxPrice(
+                    e.target.value
+                  )
+                }
+                min="0"
+              />
+
+              <button
+                type="button"
+                onClick={
+                  handleSearch
+                }
+                disabled={searching}
+              >
+                {searching
+                  ? "Searching..."
+                  : "Search"}
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleClearSearch
+                }
+              >
+                Clear
+              </button>
 
             </div>
 
@@ -585,7 +828,8 @@ function VehicleDashboard({ onLogout }) {
                 onChange={(e) =>
                   setNewVehicle({
                     ...newVehicle,
-                    make: e.target.value,
+                    make:
+                      e.target.value,
                   })
                 }
                 required
@@ -600,7 +844,8 @@ function VehicleDashboard({ onLogout }) {
                 onChange={(e) =>
                   setNewVehicle({
                     ...newVehicle,
-                    model: e.target.value,
+                    model:
+                      e.target.value,
                   })
                 }
                 required
@@ -666,13 +911,132 @@ function VehicleDashboard({ onLogout }) {
             </form>
           )}
 
+          {/* EDIT VEHICLE FORM */}
+
+          {editingVehicle && (
+            <form
+              className="add-vehicle-form edit-vehicle-form"
+              onSubmit={
+                handleUpdateVehicle
+              }
+            >
+
+              <h3>
+                Edit Vehicle
+              </h3>
+
+              <input
+                type="text"
+                placeholder="Make"
+                value={
+                  editingVehicle.make
+                }
+                onChange={(e) =>
+                  setEditingVehicle({
+                    ...editingVehicle,
+                    make:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
+                type="text"
+                placeholder="Model"
+                value={
+                  editingVehicle.model
+                }
+                onChange={(e) =>
+                  setEditingVehicle({
+                    ...editingVehicle,
+                    model:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
+                type="text"
+                placeholder="Category"
+                value={
+                  editingVehicle.category
+                }
+                onChange={(e) =>
+                  setEditingVehicle({
+                    ...editingVehicle,
+                    category:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <input
+                type="number"
+                placeholder="Price"
+                value={
+                  editingVehicle.price
+                }
+                onChange={(e) =>
+                  setEditingVehicle({
+                    ...editingVehicle,
+                    price:
+                      e.target.value,
+                  })
+                }
+                min="0"
+                required
+              />
+
+              <input
+                type="number"
+                placeholder="Quantity"
+                value={
+                  editingVehicle.quantity
+                }
+                onChange={(e) =>
+                  setEditingVehicle({
+                    ...editingVehicle,
+                    quantity:
+                      e.target.value,
+                  })
+                }
+                min="0"
+                required
+              />
+
+              <button
+                type="submit"
+                className="submit-vehicle-button"
+              >
+                Save Changes
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setEditingVehicle(null)
+                }
+              >
+                Cancel
+              </button>
+
+            </form>
+          )}
+
+          {/* ERROR */}
+
           {error && (
             <div className="error">
               {error}
             </div>
           )}
 
-          {filteredVehicles.length === 0 &&
+          {/* EMPTY */}
+
+          {vehicles.length === 0 &&
             !error && (
               <div className="empty-state">
 
@@ -685,8 +1049,8 @@ function VehicleDashboard({ onLogout }) {
                 </h3>
 
                 <p>
-                  Try changing your search
-                  or category filter.
+                  Try changing your
+                  search or filters.
                 </p>
 
               </div>
@@ -696,7 +1060,7 @@ function VehicleDashboard({ onLogout }) {
 
           <div className="vehicle-grid">
 
-            {filteredVehicles.map(
+            {vehicles.map(
               (vehicle) => {
 
                 const vehicleName =
@@ -834,8 +1198,6 @@ function VehicleDashboard({ onLogout }) {
 
                         </div>
 
-                        {/* ACTIONS */}
-
                         <div>
 
                           {/* ADMIN ACTIONS */}
@@ -850,6 +1212,19 @@ function VehicleDashboard({ onLogout }) {
                                   "8px",
                               }}
                             >
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingVehicle(
+                                    {
+                                      ...vehicle,
+                                    }
+                                  )
+                                }
+                              >
+                                Edit
+                              </button>
 
                               <button
                                 type="button"
