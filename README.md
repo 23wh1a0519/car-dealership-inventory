@@ -337,45 +337,6 @@ Normal authenticated users can view/search vehicles and purchase vehicles.
 
 ---
 
-# Screenshots
-
-Screenshots of the final application are included below.
-
-## Login
-
-Add your final login screenshot here:
-
-```text
-![Login Screen](screenshots/login.png)
-```
-
-## Vehicle Dashboard
-
-Add your final dashboard screenshot here:
-
-```text
-![Vehicle Dashboard](screenshots/dashboard.png)
-```
-
-## Vehicle Search
-
-Add a screenshot showing make/model/category/price filtering:
-
-```text
-![Vehicle Search](screenshots/search.png)
-```
-
-## Admin Vehicle Management
-
-Add a screenshot showing the admin Add/Edit/Delete controls:
-
-```text
-![Admin Dashboard](screenshots/admin-dashboard.png)
-```
-
-
----
-
 # My AI Usage
 
 AI tools were used as development assistants throughout the project. The implementation, integration, testing, and final decisions were performed and verified manually.
