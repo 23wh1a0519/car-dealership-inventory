@@ -445,7 +445,89 @@ The main development areas included:
 10. UI refinement and final documentation
 
 ---
+# Screenshots
 
+### 1. Login Page
+<img width="1568" height="717" alt="image" src="https://github.com/user-attachments/assets/5af9cf24-e7d8-4705-99b4-9f8a0d10cdf4" />
+
+**Features:**
+- Email and password input fields
+- "Sign in" button
+- Secure access message
+- Professional branding (Velocity Motors)
+
+---
+
+### 2. Dashboard
+<img width="1568" height="726" alt="image" src="https://github.com/user-attachments/assets/b07fd915-246c-4738-9cbf-0128e27a4a45" />
+
+**Features:**
+- Welcome message
+- Quick statistics
+- Total Models, Available Stock, Categories
+
+---
+
+### 3. Vehicle Inventory
+<img width="1568" height="730" alt="image" src="https://github.com/user-attachments/assets/0f7d48c0-2935-46a3-af61-210c53aa219e" />
+
+**Features:**
+- Admin "Add Vehicle" button
+- Search filters (Make, Model, Category, Price)
+- Vehicle cards with details and actions
+
+---
+
+### 4. Sold Out Vehicle
+<img width="578" height="686" alt="image" src="https://github.com/user-attachments/assets/955f60db-5bf8-4d07-8eda-fde23bd1d4ed" />
+
+**Features:**
+- "Sold Out" badge
+- "Unavailable" disabled button
+- Full vehicle details
+
+---
+
+### 5. Restock Success
+<img width="1551" height="784" alt="image" src="https://github.com/user-attachments/assets/67c5e671-1059-4873-b573-3e993e5597b7" />
+
+**Features:**
+- Success notification
+- Updated inventory count
+- Real-time UI refresh
+
+---
+
+### 6. Search Functionality
+<img width="1568" height="654" alt="image" src="https://github.com/user-attachments/assets/4634270b-2afd-4f30-8a37-724d3113e9de" />
+
+**Features:**
+- Filter by Make, Model, Category, Price
+- Results displayed instantly
+- Clear button to reset filters
+
+---
+
+### 7. Add Vehicle Form
+<img width="1568" height="779" alt="image" src="https://github.com/user-attachments/assets/6f94248c-8507-4865-9f25-11883468df2a" />
+
+**Features:**
+- Admin form to add new vehicles
+- Fields: Make, Model, Category, Price, Quantity
+- Success notification on submission
+
+---
+
+### 8. Final Inventory
+<img width="1228" height="862" alt="image" src="https://github.com/user-attachments/assets/3675745e-bc66-4e9c-9dc9-cfea8122a117" />
+
+**Features:**
+- Multiple vehicles with stock levels
+- Mixed inventory states
+- Responsive card layout
+- All CRUD operations functional
+
+---
 # Security & Authorization
 
 The application uses JWT-based authentication for protected endpoints.
