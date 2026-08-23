@@ -138,7 +138,6 @@ function VehicleDashboard({ onLogout }) {
       setSearching(true)
       setError("")
 
-      // Validate price range
       if (
         minPrice !== "" &&
         maxPrice !== "" &&
@@ -247,6 +246,14 @@ function VehicleDashboard({ onLogout }) {
 
   async function handleAddVehicle(e) {
     e.preventDefault()
+
+    // Extra frontend protection
+    if (!isAdmin) {
+      alert(
+        "Only admin users can add vehicles."
+      )
+      return
+    }
 
     const token = getToken()
 
@@ -693,18 +700,22 @@ function VehicleDashboard({ onLogout }) {
                 Vehicle Inventory
               </h2>
 
-              <button
-                className="add-vehicle-button"
-                onClick={() =>
-                  setShowAddForm(
-                    !showAddForm
-                  )
-                }
-              >
-                {showAddForm
-                  ? "✕ Cancel"
-                  : "+ Add Vehicle"}
-              </button>
+              {/* ADMIN ONLY */}
+
+              {isAdmin && (
+                <button
+                  className="add-vehicle-button"
+                  onClick={() =>
+                    setShowAddForm(
+                      !showAddForm
+                    )
+                  }
+                >
+                  {showAddForm
+                    ? "✕ Cancel"
+                    : "+ Add Vehicle"}
+                </button>
+              )}
 
             </div>
 
@@ -805,9 +816,9 @@ function VehicleDashboard({ onLogout }) {
 
           </div>
 
-          {/* ADD VEHICLE FORM */}
+          {/* ADD VEHICLE FORM — ADMIN ONLY */}
 
-          {showAddForm && (
+          {isAdmin && showAddForm && (
             <form
               className="add-vehicle-form"
               onSubmit={
