@@ -1,15 +1,69 @@
+from uuid import uuid4
 from fastapi.testclient import TestClient
 from app.main import app
 from app.routers.auth import get_db
+from app.models.user import User
+
 client = TestClient(app)
-def test_create_vehicle():
-    login_response = client.post("/api/auth/login",
+def unique_email(prefix="registertest2026"):
+    return f"{prefix}_{uuid4().hex[:8]}@example.com"
+
+def create_user(email=None, is_admin=False):
+    if email is None:
+        email = unique_email("admin" if is_admin else "user")
+    db = next(get_db())
+    try:
+        user = User(
+            email=email,
+            password="Password123",
+            is_admin=is_admin,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return email
+    finally:
+        db.close()
+
+def login(email):
+    response = client.post(
+        "/api/auth/login",
         json={
-            "email": "newuser@example.com",
+            "email": email,
             "password": "Password123",
         },
     )
-    token = login_response.json()["access_token"]
+    assert response.status_code == 200
+
+    return response.json()["access_token"]
+
+def create_admin_and_login():
+    email = create_user(is_admin=True)
+    return login(email)
+
+def create_normal_user_and_login():
+    email = create_user(is_admin=False)
+    return login(email)
+
+def create_vehicle(token, make="Toyota", model="Camry"):
+    response = client.post(
+        "/api/vehicles",
+        json={
+            "make": make,
+            "model": model,
+            "category": "Sedan",
+            "price": 25000,
+            "quantity": 5,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 201
+    return response.json()
+
+def test_create_vehicle():
+    token = create_admin_and_login()
     response = client.post(
         "/api/vehicles",
         json={
@@ -18,27 +72,40 @@ def test_create_vehicle():
             "category": "Sedan",
             "price": 25000,
             "quantity": 5,
-        },headers={
+        },
+        headers={
             "Authorization": f"Bearer {token}",
-        },)
+        },
+    )
     assert response.status_code == 201
-
     data = response.json()
-
     assert data["make"] == "Toyota"
     assert data["model"] == "Camry"
     assert data["category"] == "Sedan"
     assert data["price"] == 25000
     assert data["quantity"] == 5
-def test_get_vehicles():
-    login_response = client.post(
-        "/api/auth/login",
+    assert "id" in data
+
+def test_create_vehicle_requires_admin():
+    token = create_normal_user_and_login()
+    response = client.post(
+        "/api/vehicles",
         json={
-            "email": "newuser@example.com",
-            "password": "Password123",
+            "make": "Honda",
+            "model": "Civic",
+            "category": "Sedan",
+            "price": 22000,
+            "quantity": 3,
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
         },
     )
-    token = login_response.json()["access_token"]
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Admin access required"
+
+def test_get_vehicles():
+    token = create_normal_user_and_login()
     response = client.get(
         "/api/vehicles",
         headers={
@@ -48,16 +115,15 @@ def test_get_vehicles():
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) >= 1
+
 def test_search_vehicles_by_make():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
+    admin_token = create_admin_and_login()
+    create_vehicle(
+        admin_token,
+        make="Toyota",
+        model="Camry",
     )
-    token = login_response.json()["access_token"]
+    token = create_normal_user_and_login()
     response = client.get(
         "/api/vehicles/search",
         params={
@@ -71,30 +137,17 @@ def test_search_vehicles_by_make():
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 1
-    assert data[0]["make"] == "Toyota"
-
+    for vehicle in data:
+        assert vehicle["make"] == "Toyota"
+        
 def test_search_vehicles_by_model():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
+    admin_token = create_admin_and_login()
+    create_vehicle(
+        admin_token,
+        make="Toyota",
+        model="Camry",
     )
-    token = login_response.json()["access_token"]
-    client.post(
-        "/api/vehicles",
-        json={
-            "make": "Honda",
-            "model": "Civic",
-            "category": "Sedan",
-            "price": 22000,
-            "quantity": 3,
-        },
-        headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
+    token = create_normal_user_and_login()
     response = client.get(
         "/api/vehicles/search",
         params={
@@ -112,15 +165,8 @@ def test_search_vehicles_by_model():
         assert vehicle["model"] == "Camry"
 
 def test_search_vehicles_by_category():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
-    )
-    token = login_response.json()["access_token"]
-    client.post(
+    admin_token = create_admin_and_login()
+    response_create = client.post(
         "/api/vehicles",
         json={
             "make": "BMW",
@@ -130,9 +176,11 @@ def test_search_vehicles_by_category():
             "quantity": 2,
         },
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {admin_token}",
         },
     )
+    assert response_create.status_code == 201
+    token = create_normal_user_and_login()
     response = client.get(
         "/api/vehicles/search",
         params={
@@ -150,15 +198,8 @@ def test_search_vehicles_by_category():
         assert vehicle["category"] == "SUV"
 
 def test_search_vehicles_by_price_range():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
-    )
-    token = login_response.json()["access_token"]
-    client.post(
+    admin_token = create_admin_and_login()
+    response_create = client.post(
         "/api/vehicles",
         json={
             "make": "Ford",
@@ -168,9 +209,11 @@ def test_search_vehicles_by_price_range():
             "quantity": 2,
         },
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {admin_token}",
         },
     )
+    assert response_create.status_code == 201
+    token = create_normal_user_and_login()
     response = client.get(
         "/api/vehicles/search",
         params={
@@ -189,28 +232,13 @@ def test_search_vehicles_by_price_range():
         assert 40000 <= vehicle["price"] <= 50000
 
 def test_update_vehicle():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
+    token = create_admin_and_login()
+    vehicle = create_vehicle(
+        token,
+        make="Toyota",
+        model="Corolla",
     )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
-        "/api/vehicles",
-        json={
-            "make": "Toyota",
-            "model": "Corolla",
-            "category": "Sedan",
-            "price": 20000,
-            "quantity": 5,
-        },
-        headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    vehicle_id = create_response.json()["id"]
+    vehicle_id = vehicle["id"]
     response = client.put(
         f"/api/vehicles/{vehicle_id}",
         json={
@@ -233,81 +261,84 @@ def test_update_vehicle():
     assert data["price"] == 25000
     assert data["quantity"] == 3
 
-def test_delete_vehicle_requires_admin():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
+def test_update_vehicle_requires_admin():
+    admin_token = create_admin_and_login()
+    vehicle = create_vehicle(
+        admin_token,
+        make="Honda",
+        model="City",
     )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
-        "/api/vehicles",
+    normal_token = create_normal_user_and_login()
+    response = client.put(
+        f"/api/vehicles/{vehicle['id']}",
         json={
-            "make": "Audi",
-            "model": "A4",
+            "make": "Honda",
+            "model": "Civic",
             "category": "Sedan",
-            "price": 40000,
+            "price": 22000,
             "quantity": 2,
         },
         headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    vehicle_id = create_response.json()["id"]
-    response = client.delete(
-        f"/api/vehicles/{vehicle_id}",
-        headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {normal_token}",
         },
     )
     assert response.status_code == 403
-    
-def test_purchase_vehicle():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
+
+def test_delete_vehicle_requires_admin():
+    admin_token = create_admin_and_login()
+    vehicle = create_vehicle(
+        admin_token,
+        make="Audi",
+        model="A4",
+    )
+    normal_token = create_normal_user_and_login()
+    response = client.delete(
+        f"/api/vehicles/{vehicle['id']}",
+        headers={
+            "Authorization": f"Bearer {normal_token}",
         },
     )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
-        "/api/vehicles",
-        json={
-            "make": "Toyota",
-            "model": "Fortuner",
-            "category": "SUV",
-            "price": 35000,
-            "quantity": 3,
-        },
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Admin access required"
+
+def test_admin_can_delete_vehicle():
+    token = create_admin_and_login()
+    vehicle = create_vehicle(
+        token,
+        make="BMW",
+        model="X3",
+    )
+    response = client.delete(
+        f"/api/vehicles/{vehicle['id']}",
         headers={
             "Authorization": f"Bearer {token}",
         },
     )
-    vehicle_id = create_response.json()["id"]
+    assert response.status_code == 204
+
+def test_purchase_vehicle():
+    admin_token = create_admin_and_login()
+    vehicle = create_vehicle(
+        admin_token,
+        make="Toyota",
+        model="Fortuner",
+    )
+    vehicle_id = vehicle["id"]
+    user_token = create_normal_user_and_login()
     response = client.post(
         f"/api/vehicles/{vehicle_id}/purchase",
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {user_token}",
         },
     )
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == vehicle_id
-    assert data["quantity"] == 2
+    assert data["quantity"] == 4
 
 def test_purchase_vehicle_out_of_stock():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
-    )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
+    admin_token = create_admin_and_login()
+    response_create = client.post(
         "/api/vehicles",
         json={
             "make": "Honda",
@@ -317,89 +348,49 @@ def test_purchase_vehicle_out_of_stock():
             "quantity": 0,
         },
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {admin_token}",
         },
     )
-    vehicle_id = create_response.json()["id"]
+    assert response_create.status_code == 201
+    vehicle_id = response_create.json()["id"]
+    user_token = create_normal_user_and_login()
     response = client.post(
         f"/api/vehicles/{vehicle_id}/purchase",
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {user_token}",
         },
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Vehicle is out of stock"
 
 def test_restock_vehicle_requires_admin():
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "newuser@example.com",
-            "password": "Password123",
-        },
+    admin_token = create_admin_and_login()
+    vehicle = create_vehicle(
+        admin_token,
+        make="Toyota",
+        model="RAV4",
     )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
-        "/api/vehicles",
-        json={
-            "make": "Toyota",
-            "model": "RAV4",
-            "category": "SUV",
-            "price": 30000,
-            "quantity": 2,
-        },
-        headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    vehicle_id = create_response.json()["id"]
+    normal_token = create_normal_user_and_login()
     response = client.post(
-        f"/api/vehicles/{vehicle_id}/restock",
+        f"/api/vehicles/{vehicle['id']}/restock",
         json={
             "quantity": 5,
         },
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {normal_token}",
         },
     )
     assert response.status_code == 403
+    assert response.json()["detail"] == "Admin access required"
 
 def test_admin_can_restock_vehicle():
-    db = next(get_db())
-    try:
-        from app.models.user import User
-        admin = User(
-            email="samplerestockadmin@example.com",
-            password="Password123",
-            is_admin=True,
-        )
-        db.add(admin)
-        db.commit()
-        db.refresh(admin)
-    finally:
-        db.close()
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "samplerestockadmin@example.com",
-            "password": "Password123",
-        },
+    token = create_admin_and_login()
+    vehicle = create_vehicle(
+        token,
+        make="Toyota",
+        model="RAV4",
     )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
-        "/api/vehicles",
-        json={
-            "make": "Toyota",
-            "model": "RAV4",
-            "category": "SUV",
-            "price": 30000,
-            "quantity": 2,
-        },
-        headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    vehicle_id = create_response.json()["id"]
+    vehicle_id = vehicle["id"]
     response = client.post(
         f"/api/vehicles/{vehicle_id}/restock",
         json={
@@ -412,48 +403,4 @@ def test_admin_can_restock_vehicle():
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == vehicle_id
-    assert data["quantity"] == 7
-
-def test_admin_can_delete_vehicle():
-    db = next(get_db())
-    try:
-        from app.models.user import User
-        admin = User(
-            email="deleteadmin@example.com",
-            password="Password123",
-            is_admin=True,
-        )
-        db.add(admin)
-        db.commit()
-        db.refresh(admin)
-    finally:
-        db.close()
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": "deleteadmin@example.com",
-            "password": "Password123",
-        },
-    )
-    token = login_response.json()["access_token"]
-    create_response = client.post(
-        "/api/vehicles",
-        json={
-            "make": "BMW",
-            "model": "X3",
-            "category": "SUV",
-            "price": 50000,
-            "quantity": 2,
-        },
-        headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    vehicle_id = create_response.json()["id"]
-    response = client.delete(
-        f"/api/vehicles/{vehicle_id}",
-        headers={
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    assert response.status_code == 204
+    assert data["quantity"] == 10

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { saveToken } from "./auth"
 
-const API_URL = "http://localhost:8000"
+const API_URL = "https://car-dealership-inventory-production-818d.up.railway.app"
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState("")

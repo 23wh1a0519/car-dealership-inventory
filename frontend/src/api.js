@@ -1,6 +1,6 @@
 import { getToken } from "./auth"
 
-const API_URL = "http://localhost:8000"
+const API_URL = "https://car-dealership-inventory-production-818d.up.railway.app";
 
 export async function getVehicles() {
   const token = getToken()
