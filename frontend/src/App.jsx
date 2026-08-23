@@ -1,14 +1,25 @@
-import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 
+import { useState } from "react"
+import { getToken } from "./auth"
+import Login from "./Login"
+import VehicleDashboard from "./VehicleDashboard"
+import "./App.css"
+
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(!!getToken())
+
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />
+  }
+
   return (
-    <h1 className="text-4xl font-bold text-blue-600">
-      Car Dealership Inventory
-    </h1>
+    <VehicleDashboard
+      onLogout={() => setIsLoggedIn(false)}
+    />
   )
 }
 
